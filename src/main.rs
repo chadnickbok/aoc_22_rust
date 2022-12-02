@@ -12,6 +12,6 @@ fn main() {
         std::process::exit(1);
     }
 
-    let result = day2::star1(&args[1]);
+    let result = day2::star2(&args[1]);
     println!("day2: {}", result)
 }
