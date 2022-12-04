@@ -92,3 +92,41 @@ pub fn star1(filename: &str) -> usize {
 
     total
 }
+
+
+fn common_score(elf_group: &Vec<String>) -> Option<usize> {
+    let a = elf_group.get(0).expect("failed to get line 0");
+    let b = elf_group.get(1).expect("failed to get element 2");
+    let c = elf_group.get(2).expect("failed to get element 3");
+
+    for ac in a.chars() {
+        for bc in b.chars() {
+            for cc in c.chars() {
+                if ac == bc && bc == cc {
+                    let score = char_to_score(ac);
+                    println!("found common {} {}", ac, score);
+                    return Some(score);
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn star2(filename: &str) -> Result<usize, std::io::Error> {
+    let lines = utils::read_lines(filename).expect("failed to read lines from file");
+    let mut total = 0;
+    let mut elf_group = Vec::new();
+
+    for raw_line in lines {
+        let line = raw_line.expect("failed parsing line");
+        elf_group.push(line);
+
+        if elf_group.len() == 3 {
+            total += common_score(&elf_group).expect("failed to get common item");
+            elf_group.clear();
+        }
+    }
+
+    Ok(total)
+}
