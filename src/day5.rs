@@ -36,9 +36,14 @@ pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
 
         println!("Move {} from {} to {}", count, from, to);
 
+        let mut temp = Vec::new();
+
         for _ in 0..count {
-            let cur_crate = stacks[from].pop().expect("bad pop");
-            stacks[to].push(cur_crate);
+            temp.push(stacks[from].pop().expect("bad pop"));
+        }
+
+        for _ in 0..count {
+            stacks[to].push(temp.pop().expect("bad temp pop"));
         }
 
         print_stacks(&stacks);
