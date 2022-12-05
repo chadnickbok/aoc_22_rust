@@ -23,6 +23,18 @@ impl Range {
         }
         false
     }
+
+    fn overlaps(&self, r2: &Range) -> bool {
+        if self.r < r2.l {
+            return false;
+        }
+
+        if self.l > r2.r {
+            return false;
+        }
+
+        return true;
+    }
 }
 
 
@@ -37,6 +49,24 @@ pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
         let r2 = Range::new(&line[i+1..]).expect("bad range 2");
 
         if r1.contains(&r2) || r2.contains(&r1) {
+            total += 1;
+        }
+    }
+
+    Ok(total)
+}
+
+pub fn star2(filename: &str) -> Result<usize, utils::AocError> {
+    let lines = utils::read_lines(filename).expect("failed to read lines from file");
+    let mut total = 0;
+
+    for raw_line in lines {
+        let line = raw_line.expect("failed to red line");
+        let i = line.find(",").expect("invalid range pair");
+        let r1 = Range::new(&line[..i]).expect("bad range 1");
+        let r2 = Range::new(&line[i+1..]).expect("bad range 2");
+
+        if r1.overlaps(&r2) {
             total += 1;
         }
     }

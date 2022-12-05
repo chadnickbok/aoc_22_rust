@@ -21,6 +21,4 @@ impl AocError {
     pub fn new<T: Into<String>>(t: T) -> AocError {
         AocError{ err: t.into() }
     }
-
-
 }
