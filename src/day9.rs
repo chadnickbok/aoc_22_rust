@@ -3,49 +3,49 @@ use std::str::FromStr;
 
 
 
-fn move_tail(head_x: i32, head_y: i32, tail_x: i32, tail_y: i32) -> (i32, i32) {
+fn move_tail(head: (i32, i32), tail: (i32, i32)) -> (i32, i32) {
     // Move Right
-    if (head_y == tail_y) && (head_x > (tail_x + 1)) {
-        return (tail_x + 1, tail_y);
+    if (head.1 == tail.1) && (head.0 > (tail.0 + 1)) {
+        return (tail.0 + 1, tail.1);
     }
 
     // Move Left
-    if (head_y == tail_y) && (head_x < (tail_x - 1)) {
-        return (tail_x - 1, tail_y);
+    if (head.1 == tail.1) && (head.0 < (tail.0 - 1)) {
+        return (tail.0 - 1, tail.1);
     }
 
     // Move Up
-    if (head_y > (tail_y + 1)) && head_x == tail_x {
-        return (tail_x, tail_y + 1);
+    if (head.1 > (tail.1 + 1)) && head.0 == tail.0 {
+        return (tail.0, tail.1 + 1);
     }
 
     // Move Down
-    if (head_y < (tail_y - 1)) && head_x == tail_x {
-        return (tail_x, tail_y - 1);
+    if (head.1 < (tail.1 - 1)) && head.0 == tail.0 {
+        return (tail.0, tail.1 - 1);
     }
 
     // Move Up and Right
-    if (head_y > tail_y) && (head_x > tail_x) && ((head_y > (tail_y + 1)) || (head_x > (tail_x + 1))) {
-        return (tail_x + 1, tail_y + 1);
+    if (head.1 > tail.1) && (head.0 > tail.0) && ((head.1 > (tail.1 + 1)) || (head.0 > (tail.0 + 1))) {
+        return (tail.0 + 1, tail.1 + 1);
     }
 
     // Move Up and Left
-    if (head_y > tail_y) && (head_x < tail_x) && ((head_y > (tail_y + 1)) || (head_x < (tail_x - 1))) {
-        return (tail_x - 1, tail_y + 1);
+    if (head.1 > tail.1) && (head.0 < tail.0) && ((head.1 > (tail.1 + 1)) || (head.0 < (tail.0 - 1))) {
+        return (tail.0 - 1, tail.1 + 1);
     }
 
     // Move Down and Right
-    if (head_y < tail_y) && (head_x > tail_x) && ((head_y < (tail_y - 1)) || (head_x > (tail_x + 1))) {
-        return (tail_x + 1, tail_y - 1);
+    if (head.1 < tail.1) && (head.0 > tail.0) && ((head.1 < (tail.1 - 1)) || (head.0 > (tail.0 + 1))) {
+        return (tail.0 + 1, tail.1 - 1);
     }
 
     // Move Down and Left
-    if (head_y < tail_y) && (head_x < tail_x) && ((head_y < (tail_y - 1)) || (head_x < (tail_x - 1))) {
-        return (tail_x - 1, tail_y - 1);
+    if (head.1 < tail.1) && (head.0 < tail.0) && ((head.1 < (tail.1 - 1)) || (head.0 < (tail.0 - 1))) {
+        return (tail.0 - 1, tail.1 - 1);
     }
 
     // No need to move
-    (tail_x, tail_y)
+    (tail.0, tail.1)
 }
 
 
@@ -61,11 +61,9 @@ pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
         }
     }
 
-    let mut tail_x = 512;
-    let mut tail_y = 512;
+    let mut tail = (512, 512);
 
-    let mut head_x = 512;
-    let mut head_y = 512;
+    let mut head = (512, 512);
 
     let lines = utils::read_lines(filename).expect("failed to read lines from file");
     for line in lines {
@@ -84,16 +82,76 @@ pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
         }
 
         for _ in 0..count {
-            head_x += x_step;
-            head_y += y_step;
+            head.0 += x_step;
+            head.1 += y_step;
 
-            println!("{} {}", head_x, head_y);
+            println!("{} {}", head.0, head.1);
 
-            let (new_x, new_y) = move_tail(head_x, head_y, tail_x, tail_y);
-            tail_x = new_x;
-            tail_y = new_y;
+            let (new_x, new_y) = move_tail(head,tail);
+            tail.0 = new_x;
+            tail.1 = new_y;
 
-            visited_grid[tail_y as usize][tail_x as usize] = true;
+            visited_grid[tail.1 as usize][tail.0 as usize] = true;
+        }
+    }
+
+    for j in 0..1024 {
+        for i in 0..1024 {
+            if visited_grid[j][i] {
+                total += 1;
+            }
+        }
+    }
+
+    Ok(total)
+}
+
+
+pub fn star2(filename: &str) -> Result<usize, utils::AocError> {
+    let mut total = 0;
+    let mut visited_grid:Vec<Vec<bool>> = Vec::new();
+    
+    // Setup an empty grid
+    for j in 0..1024 {
+        visited_grid.push(Vec::new());
+        for i in 0..1024 {
+            visited_grid[j].push(false);
+        }
+    }
+
+    let mut segments: Vec<(i32, i32)> = Vec::new();
+    for _ in 0..10 {
+        segments.push((512, 512));
+    }
+
+    let lines = utils::read_lines(filename).expect("failed to read lines from file");
+    for line in lines {
+        let line = line.expect("bad line");
+        let cmd: Vec<&str> = line.split_whitespace().collect();
+        let count = usize::from_str(cmd[1]).expect("bad count");
+
+        let mut x_step = 0;
+        let mut y_step = 0;
+        match cmd[0] {
+            "R" => x_step = 1,
+            "U" => y_step = 1,
+            "L" => x_step = -1,
+            "D" => y_step = -1,
+            _ => println!("Bad move!"),
+        }
+
+        for _ in 0..count {
+            segments[0].0 += x_step;
+            segments[0].1 += y_step;
+
+            println!("{:?}", segments[0]);
+
+            for i in 0..9 {
+                let (new_x, new_y) = move_tail(segments[i], segments[i+1]);
+                segments[i+1] = (new_x, new_y);
+            }
+
+            visited_grid[segments[9].1 as usize][segments[9].0 as usize] = true;
         }
     }
 
