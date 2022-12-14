@@ -1,6 +1,7 @@
 use crate::utils;
 use std::collections::VecDeque;
 use std::collections::HashSet;
+use anyhow::{Result, anyhow};
 
 fn is_unique(v: &VecDeque<char>) -> bool {
     let mut s = HashSet::new();
@@ -12,13 +13,13 @@ fn is_unique(v: &VecDeque<char>) -> bool {
     true
 }
 
-pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
+pub fn star1(filename: &str) -> Result<usize> {
     let mut lines = utils::read_lines(filename).expect("failed to read lines from file");
     let raw_line = lines.nth(0).expect("bad input file");
     let line = raw_line.expect("bad line");
 
     if line.len() < 4 {
-        return Err(utils::AocError::new("bad line len"));
+        return Err(anyhow!("bad line len"));
     }
 
     let mut i = 0;
@@ -38,5 +39,5 @@ pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
         prev_chars.pop_front();
     }
 
-    Err(utils::AocError::new("bad input"))
+    Err(anyhow!("bad input"))
 }

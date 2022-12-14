@@ -1,6 +1,6 @@
 use crate::utils;
 use std::str::FromStr;
-use std::error::Error as StdError;
+use anyhow::{Result, anyhow};
 
 struct Range {
     l: usize,
@@ -8,12 +8,12 @@ struct Range {
 }
 
 impl Range {
-    fn new(raw_range: &str) -> Result<Range, utils::AocError> {
+    fn new(raw_range: &str) -> Result<Range> {
         let i = raw_range.find("-").expect("Invalid range");
 
         match (usize::from_str(&raw_range[..i]), usize::from_str(&raw_range[i + 1..])) {
             (Ok(l), Ok(r)) => return Ok(Range{l, r}),
-            _ => Err(utils::AocError::new("bad string")),
+            _ => Err(anyhow!("bad string")),
         }
     }
 

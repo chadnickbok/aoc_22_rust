@@ -1,6 +1,7 @@
 
 use crate::utils;
 use std::str::FromStr;
+use anyhow::{Result, anyhow};
 
 fn print_stacks(stacks: &Vec<Vec<char>>) {
     for stack in stacks {
@@ -8,7 +9,7 @@ fn print_stacks(stacks: &Vec<Vec<char>>) {
     }
 }
 
-pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
+pub fn star1(filename: &str) -> Result<usize> {
     let mut stacks = vec![
         vec!['N', 'S', 'D', 'C', 'V', 'Q', 'T'],
         vec!['M', 'F', 'V'],
@@ -22,13 +23,12 @@ pub fn star1(filename: &str) -> Result<usize, utils::AocError> {
     ];
     
     let lines = utils::read_lines(filename).expect("failed to read lines from file");
-    
     for raw_line in lines {
         let line = raw_line.expect("ooops bad line");
         let instructions: Vec<&str> = line.split_whitespace().collect();
         if instructions.len() != 6 {
             println!("Error, bad input string");
-            return Err(utils::AocError::new("bad input"));
+            return Err(anyhow!("bad input"));
         }
         let count = usize::from_str(instructions[1]).expect("invalid count");
         let from = usize::from_str(instructions[3]).expect("invalid from") - 1;
