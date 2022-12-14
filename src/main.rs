@@ -14,6 +14,7 @@ mod day10;
 mod day11;
 mod day12;
 mod day13;
+mod day14;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -23,7 +24,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    if let Ok(result) = day13::star2(&args[1]) {
+    if let Ok(result) = day14::star1(&args[1]) {
         println!("day13 star2: {}", result)
     }
 }
