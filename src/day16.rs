@@ -160,18 +160,32 @@ fn dfs_2<'a>(
 
     // Iterate over the remaining nodes to visit
     for i in 0..remaining.len() {
-        // Try adding the node to the first path
-        let node = remaining.remove(i);
-        path1.push(node.clone());
-        dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
-        path1.pop();
+        // Try adding the node to the shorter path
+        if (path1.len() < path2.len()) {
+            let node = remaining.remove(i);
+            path1.push(node.clone());
+            dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
+            path1.pop();
 
-        // Try adding the node to the second path
-        path2.push(node.clone());
-        dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
-        path2.pop();
+            // Try adding the node to the second path
+            path2.push(node.clone());
+            dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
+            path2.pop();
 
-        remaining.insert(i, node);
+            remaining.insert(i, node);
+        } else {
+            let node = remaining.remove(i);
+            // Try adding the node to the second path
+            path2.push(node.clone());
+            dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
+            path2.pop();
+
+            path1.push(node.clone());
+            dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
+            path1.pop();
+
+            remaining.insert(i, node);
+        }
     }
 }
 
@@ -197,6 +211,108 @@ fn find_best_paths_2<'a>(
     let value2 = total_path(nodes, &best_paths.1).1;
 
     ((best_paths.0, value1), (best_paths.1, value2))
+}
+
+fn bfs<'a>(
+    nodes: &HashMap<String, Node>,
+    to_visit: Vec<&'a str>,
+    best_value: &mut i64,
+    best_paths: &mut (Vec<&'a str>, Vec<&'a str>),
+) {
+    let max_depth = to_visit.len() + 1;
+
+    for depth in 1..=max_depth {
+        println!("Searching with depth limit {}", depth);
+        let mut path1 = vec!["AA"];
+        let mut path2 = vec!["AA"];
+        let mut remaining = to_visit.clone();
+        generate_paths(
+            nodes,
+            &mut path1,
+            &mut path2,
+            &mut remaining,
+            best_value,
+            best_paths,
+            depth,
+        );
+    }
+
+    let value1 = total_path(nodes, &best_paths.0).1;
+    let value2 = total_path(nodes, &best_paths.1).1;
+
+    println!(
+        "Best paths found: {:?} and {:?}, combined value: {}",
+        best_paths.0,
+        best_paths.1,
+        value1 + value2
+    );
+}
+
+fn generate_paths<'a>(
+    nodes: &HashMap<String, Node>,
+    path1: &mut Vec<&'a str>,
+    path2: &mut Vec<&'a str>,
+    remaining: &mut Vec<&'a str>,
+    best_value: &mut i64,
+    best_paths: &mut (Vec<&'a str>, Vec<&'a str>),
+    depth: usize,
+) {
+    if path1.len() == depth && path2.len() <= depth {
+        update_best(nodes, path1, path2, best_value, best_paths);
+    }
+
+    // Iterate over the remaining nodes to visit
+    for i in 0..remaining.len() {
+        // Try adding the node to the first path
+        let node = remaining.remove(i);
+        path1.push(node);
+        if path1.len() <= depth {
+            generate_paths(
+                nodes, path1, path2, remaining, best_value, best_paths, depth,
+            );
+        }
+        path1.pop();
+
+        // Try adding the node to the second path
+        path2.push(node);
+        if path2.len() <= depth {
+            generate_paths(
+                nodes, path1, path2, remaining, best_value, best_paths, depth,
+            );
+        }
+        path2.pop();
+
+        remaining.insert(i, node);
+    }
+}
+
+fn update_best<'a>(
+    nodes: &HashMap<String, Node>,
+    path1: &mut Vec<&'a str>,
+    path2: &mut Vec<&'a str>,
+    best_value: &mut i64,
+    best_paths: &mut (Vec<&'a str>, Vec<&'a str>),
+) {
+    let (length1, value1) = total_path(nodes, path1);
+    let (length2, value2) = total_path(nodes, path2);
+
+    if let (Some(length1), Some(length2)) = (length1, length2) {
+        if length1 > MAX_I || length2 > MAX_I {
+            return;
+        }
+    } else {
+        return;
+    }
+
+    let combined_value = value1 + value2;
+    if combined_value > *best_value {
+        *best_value = combined_value;
+        *best_paths = (path1.clone(), path2.clone());
+        println!(
+            "New best paths found: {:?} and {:?}, combined value: {}",
+            path1, path2, combined_value
+        );
+    }
 }
 
 pub fn calc_star1(filename: &str) -> Result<i32> {
@@ -263,9 +379,16 @@ pub fn calc_star2(filename: &str) -> Result<i32> {
         );
     }
 
+    //let mut to_visit = vec![
+    //    "OA", "QO", "UE", "JJ", "MI", "WG", "GY", "OQ", "NK", "RY", "JE", "JH", "EW", "MC", "GO",
+    //];
     let mut to_visit = vec![
-        "OA", "QO", "UE", "JJ", "MI", "WG", "GY", "OQ", "NK", "RY", "JE", "JH", "EW", "MC", "GO",
+        "NK", "GY", "EW", "MI", "WG", "RY", "UE", "JJ", "OA", "MC", "JE", "OQ", "QO", "GO", "JH",
     ];
+
+    //let mut best_value: i64 = 0;
+    //let mut best_paths = (Vec::new(), Vec::new());
+    //bfs(&valves, to_visit, &mut best_value, &mut best_paths);
 
     let ((best_path1, best_value1), (best_path2, best_value2)) =
         find_best_paths_2(&valves, to_visit);
