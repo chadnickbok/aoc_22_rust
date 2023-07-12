@@ -1,6 +1,7 @@
 use crate::utils;
 use anyhow::Result;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::str::FromStr;
 
 const MAX_I: i64 = 30;
@@ -18,114 +19,114 @@ enum Action {
     None,
 }
 
-// Calculate and return the total 'value' accumulated by opening valves along
-// the path represented by the action vector.
-fn value_of_path(actions: &Vec<Action>, valves: &HashMap<String, Node>) -> i64 {
-    let mut value = 0;
-    let mut i = MAX_I;
-    for action in actions {
-        i = i - 1;
-        match action {
-            Action::Open(valve) => match valves.get(valve) {
-                Some(v) => value = value + v.value * i,
-                _ => (),
-            },
-            _ => (),
+fn shortest_path(nodes: &HashMap<String, Node>, start: &str, end: &str) -> Option<i64> {
+    let mut visited = HashMap::new();
+    for node in nodes.keys() {
+        visited.insert(node.clone(), false);
+    }
+
+    let mut queue = VecDeque::new();
+    queue.push_back((start.to_string(), 0));
+
+    while let Some((node, dist)) = queue.pop_front() {
+        if node == end {
+            return Some(dist);
         }
-    }
-
-    value
-}
-
-// Check whether a specific node represented by the string has been visited
-// in the path represented by the action vector.
-fn is_visited(path: &Vec<Action>, n: &String) -> bool {
-    for v in path {
-        match v {
-            Action::Open(s) => {
-                if s == n {
-                    return true;
-                }
-            }
-            _ => {}
-        }
-    }
-    return false;
-}
-
-fn path_search(
-    count: i64,
-    path: Vec<Action>,
-    nodes: &HashMap<String, Node>,
-    cur_node_name: &String,
-) -> i64 {
-    let c = count + 1;
-    if c == MAX_I {
-        let v = value_of_path(&path, nodes);
-        return v;
-    }
-
-    let node = nodes.get(cur_node_name).expect("wrong node");
-
-    // First, check if the current valve is open
-    let mut max_flow = 0;
-    if node.value > 0 && !is_visited(&path, &cur_node_name) {
-        let mut p = path.clone();
-        p.push(Action::Open(cur_node_name.clone()));
-        max_flow = path_search(c, p, nodes, cur_node_name);
-    }
-
-    if count > 25 {
-        let mut all_move = false;
-        for i in path.len() - 10..path.len() {
-            match &path[i] {
-                Action::Open(_) => all_move = false,
-                _ => all_move = true,
-            }
-        }
-
-        if all_move {
-            let mut p = path.clone();
-            p.push(Action::None);
-            let cur_flow = value_of_path(&p, nodes);
-            if cur_flow > max_flow {
-                return cur_flow;
-            } else {
-                return max_flow;
-            }
-        }
-    }
-
-    let mut prev_n = String::new();
-    if path.len() > 1 {
-        let prev = &path[path.len() - 1];
-        match prev {
-            Action::Move((a, _)) => prev_n = a.clone(),
-            _ => (),
-        }
-    }
-
-    for next in &node.connections {
-        if next == &prev_n {
-            // Can't move back to the previous valve
+        if visited[&node] {
             continue;
         }
-        let mut p = path.clone();
-        p.push(Action::Move((cur_node_name.clone(), next.clone())));
-        let cur_flow = path_search(c, p, nodes, &next);
-        if cur_flow > max_flow {
-            max_flow = cur_flow;
+        visited.insert(node.clone(), true);
+        for adjacent in &nodes[&node].connections {
+            queue.push_back((adjacent.clone(), dist + 1));
         }
     }
 
-    if count == 2 {
-        println!("{:?} {}", &path, max_flow);
-    }
-
-    max_flow
+    None
 }
 
-pub fn find_best_path(filename: &str) -> Result<i32> {
+// Length between nodes, plus 1 each time to turn on the valve
+// returns the length of the path, and the total expected value of the path
+fn total_path(nodes: &HashMap<String, Node>, path: &Vec<&str>) -> (Option<i64>, i64) {
+    let mut total_length = 0;
+    let mut total_value = 0;
+    for window in path.windows(2) {
+        match shortest_path(nodes, &window[0], &window[1]) {
+            Some(length) => {
+                let cur_node = &nodes[window[1]];
+                total_length += length + 1;
+                total_value += (MAX_I - total_length) * cur_node.value;
+            }
+            None => return (None, 0),
+        }
+    }
+    (Some(total_length), total_value)
+}
+
+fn dfs<'a>(
+    nodes: &HashMap<String, Node>,
+    path: &mut Vec<&'a str>,
+    remaining: &mut Vec<&'a str>,
+    best_value: &mut i64,
+    best_path: &mut Vec<&'a str>,
+) {
+    // Calculate the total length and value of the current path
+    let (length, value) = total_path(nodes, path);
+
+    // If the path is too long, stop exploring this branch
+    if let Some(length) = length {
+        if length > MAX_I {
+            return;
+        }
+    } else {
+        return;
+    }
+
+    // If the value of the current path is the best so far, save it
+    if value > *best_value {
+        *best_value = value;
+        let new_best_path = path.clone();
+        *best_path = new_best_path;
+        println!(
+            "New best path found: {:?}, value: {}",
+            best_path, best_value
+        );
+    }
+
+    // Iterate over the remaining nodes to visit
+    for i in 0..remaining.len() {
+        // Move a node from `remaining` to `path`
+        let node = remaining.remove(i);
+        path.push(node.clone());
+
+        // Recurse
+        dfs(nodes, path, remaining, best_value, best_path);
+
+        // Move the node back from `path` to `remaining`
+        path.pop();
+        remaining.insert(i, node);
+    }
+}
+
+fn find_best_path<'a>(
+    nodes: &HashMap<String, Node>,
+    mut to_visit: Vec<&'a str>,
+) -> (Vec<&'a str>, i64) {
+    let mut best_path = Vec::new();
+    let mut best_value = 0;
+    let mut path = vec!["AA"];
+
+    dfs(
+        nodes,
+        &mut path,
+        &mut to_visit,
+        &mut best_value,
+        &mut best_path,
+    );
+
+    (best_path, best_value)
+}
+
+pub fn calc_star1(filename: &str) -> Result<i32> {
     let mut valves = HashMap::new();
     let lines = utils::read_lines(filename).expect("failed to read lines from file");
     for line in lines {
@@ -152,13 +153,12 @@ pub fn find_best_path(filename: &str) -> Result<i32> {
         );
     }
 
-    let p = Vec::new();
-    let start = "AA".to_string();
-    let best_flow = path_search(0, p, &valves, &start);
+    let mut to_visit = vec![
+        "OA", "QO", "UE", "JJ", "MI", "WG", "GY", "OQ", "NK", "RY", "JE", "JH", "EW", "MC", "GO",
+    ];
 
-    println!("Best Flow: {}", best_flow);
-
-    println!("{:?}", valves);
+    let (best_path, best_value) = find_best_path(&valves, to_visit);
+    println!("Best Value: {} Best path: {:?}", best_value, best_path);
 
     return Ok(0);
 }
