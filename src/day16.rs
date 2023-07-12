@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::str::FromStr;
 
-const MAX_I: i64 = 30;
+const MAX_I: i64 = 26;
 
 #[derive(Clone, Debug)]
 struct Node {
@@ -126,6 +126,79 @@ fn find_best_path<'a>(
     (best_path, best_value)
 }
 
+fn dfs_2<'a>(
+    nodes: &HashMap<String, Node>,
+    path1: &mut Vec<&'a str>,
+    path2: &mut Vec<&'a str>,
+    remaining: &mut Vec<&'a str>,
+    best_value: &mut i64,
+    best_paths: &mut (Vec<&'a str>, Vec<&'a str>),
+) {
+    // Calculate the total length and value of the current paths
+    let (length1, value1) = total_path(nodes, path1);
+    let (length2, value2) = total_path(nodes, path2);
+
+    // If either path is too long, stop exploring this branch
+    if let (Some(length1), Some(length2)) = (length1, length2) {
+        if length1 > MAX_I || length2 > MAX_I {
+            return;
+        }
+    } else {
+        return;
+    }
+
+    // If the combined value of the current paths is the best so far, save it
+    let combined_value = value1 + value2;
+    if combined_value > *best_value {
+        *best_value = combined_value;
+        *best_paths = (path1.clone(), path2.clone());
+        println!(
+            "New best paths found: {:?} and {:?}, combined value: {}",
+            path1, path2, combined_value
+        );
+    }
+
+    // Iterate over the remaining nodes to visit
+    for i in 0..remaining.len() {
+        // Try adding the node to the first path
+        let node = remaining.remove(i);
+        path1.push(node.clone());
+        dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
+        path1.pop();
+
+        // Try adding the node to the second path
+        path2.push(node.clone());
+        dfs_2(nodes, path1, path2, remaining, best_value, best_paths);
+        path2.pop();
+
+        remaining.insert(i, node);
+    }
+}
+
+fn find_best_paths_2<'a>(
+    nodes: &HashMap<String, Node>,
+    mut to_visit: Vec<&'a str>,
+) -> ((Vec<&'a str>, i64), (Vec<&'a str>, i64)) {
+    let mut best_paths = (Vec::new(), Vec::new());
+    let mut best_value = 0;
+    let mut path1 = vec!["AA"];
+    let mut path2 = vec!["AA"];
+
+    dfs_2(
+        nodes,
+        &mut path1,
+        &mut path2,
+        &mut to_visit,
+        &mut best_value,
+        &mut best_paths,
+    );
+
+    let value1 = total_path(nodes, &best_paths.0).1;
+    let value2 = total_path(nodes, &best_paths.1).1;
+
+    ((best_paths.0, value1), (best_paths.1, value2))
+}
+
 pub fn calc_star1(filename: &str) -> Result<i32> {
     let mut valves = HashMap::new();
     let lines = utils::read_lines(filename).expect("failed to read lines from file");
@@ -159,6 +232,49 @@ pub fn calc_star1(filename: &str) -> Result<i32> {
 
     let (best_path, best_value) = find_best_path(&valves, to_visit);
     println!("Best Value: {} Best path: {:?}", best_value, best_path);
+
+    return Ok(0);
+}
+
+pub fn calc_star2(filename: &str) -> Result<i32> {
+    let mut valves = HashMap::new();
+    let lines = utils::read_lines(filename).expect("failed to read lines from file");
+    for line in lines {
+        let line = line.expect("bad line");
+        let input: Vec<&str> = line.split_whitespace().collect();
+
+        // "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB";
+
+        let name = input[1].to_string();
+        let rate_str = input[4].replace("rate=", "").replace(";", "");
+        println!("rate: {}", rate_str);
+        let rate = i64::from_str(rate_str.as_str()).expect("bad int");
+        let mut connections = Vec::new();
+
+        for i in 9..input.len() {
+            connections.push(input[i].replace(",", ""));
+        }
+        valves.insert(
+            name.clone(),
+            Node {
+                value: rate,
+                connections,
+            },
+        );
+    }
+
+    let mut to_visit = vec![
+        "OA", "QO", "UE", "JJ", "MI", "WG", "GY", "OQ", "NK", "RY", "JE", "JH", "EW", "MC", "GO",
+    ];
+
+    let ((best_path1, best_value1), (best_path2, best_value2)) =
+        find_best_paths_2(&valves, to_visit);
+    println!(
+        "Best Value: {} Best path1: {:?} Best path2: {:?}",
+        best_value1 + best_value2,
+        best_path1,
+        best_path2
+    );
 
     return Ok(0);
 }

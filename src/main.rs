@@ -26,7 +26,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    if let Ok(result) = day16::calc_star1(&args[1]) {
+    if let Ok(result) = day16::calc_star2(&args[1]) {
         println!("day16 star1: {}", result)
     }
 }
