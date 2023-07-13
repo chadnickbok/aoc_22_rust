@@ -121,11 +121,14 @@ fn dfs<'a>(
     let (length1, value1) = { cache.total_path(path1) };
     let (length2, value2) = { cache.total_path(path2) };
 
+    let mut total_len = 0;
+
     // If either path is too long, stop exploring this branch
     if let (Some(length1), Some(length2)) = (length1, length2) {
         if length1 > MAX_I || length2 > MAX_I {
             return;
         }
+        total_len = length1 + length2;
     } else {
         return;
     }
@@ -139,6 +142,18 @@ fn dfs<'a>(
             "New best paths found: {:?} and {:?}, combined value: {}",
             path1, path2, combined_value
         );
+    }
+
+    if (total_len > 10) && (combined_value < 1000) {
+        return;
+    }
+
+    if (total_len > 20) && (combined_value < 1500) {
+        return;
+    }
+
+    if (total_len > 30) && (combined_value < 2000) {
+        return;
     }
 
     // Iterate over the remaining nodes to visit
